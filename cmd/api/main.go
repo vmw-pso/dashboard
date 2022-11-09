@@ -28,7 +28,7 @@ func main() {
 func run(args []string) error {
 
 	// TODO: Move this a separate file that passes config from file
-	webPort, err := strconv.Atoi(os.Getenv("webPort"))
+	apiPort, err := strconv.Atoi(os.Getenv("apiPort"))
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ func run(args []string) error {
 
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 
-	cfg.port = *flags.Int("port", webPort, "Port to listen on")
+	cfg.port = *flags.Int("port", apiPort, "Port to listen on")
 	cfg.env = *flags.String("env", "development", "Environment ([development]|production)")
 
 	if err := flags.Parse(args[1:]); err != nil {
