@@ -3,10 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"strconv"
-	"time"
+	"sync"
+
+	"github.com/vmw-pso/delivery-dashboard/back-end/internal/jsonlog"
+)
+
+const (
+	version = "0.0.1"
 )
 
 type config struct {
@@ -15,7 +20,9 @@ type config struct {
 }
 
 type application struct {
-	cfg *config
+	cfg    *config
+	logger *jsonlog.Logger
+	wg     sync.WaitGroup
 }
 
 func main() {
@@ -44,16 +51,11 @@ func run(args []string) error {
 		return err
 	}
 
-	app := application{cfg: &cfg}
-
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", app.cfg.port),
-		Handler:      app.routes(),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+	app := application{
+		cfg:    &cfg,
+		logger: jsonlog.New(os.Stdout, jsonlog.LevelInfo),
+		wg:     sync.WaitGroup{},
 	}
 
-	fmt.Printf("Starting %s server on %d", app.cfg.env, app.cfg.port)
-	return srv.ListenAndServe()
+	return app.serve()
 }

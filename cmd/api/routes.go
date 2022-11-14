@@ -9,7 +9,7 @@ import (
 func (app *application) routes() http.Handler {
 	mux := httprouter.New()
 
-	mux.HandlerFunc(http.MethodGet, "/healthcheck", app.handleHealthcheck())
+	mux.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.handleHealthcheck())
 
 	return mux
 }
