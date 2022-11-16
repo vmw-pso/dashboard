@@ -12,8 +12,8 @@ CREATE TABLE "resources" (
   "id" int PRIMARY KEY,
   "first_name" varchar NOT NULL,
   "last_name" varchar NOT NULL,
-  "position" int NOT NULL,
-  "clearance" int NOT NULL,
+  "position_id" int NOT NULL,
+  "clearance_id" int NOT NULL,
   "specialties" text[],
   "certifications" text[]
 );
@@ -40,13 +40,13 @@ CREATE TABLE "resource_assignments" (
   PRIMARY KEY(resource_request_id, resource_id)
 );
 
-CREATE INDEX "idx_resource_clearance" ON "resources" ("clearance");
+CREATE INDEX "idx_resource_clearance" ON "resources" ("clearance_id");
 
-CREATE INDEX "idx_resource_position" ON "resources" ("position");
+CREATE INDEX "idx_resource_position" ON "resources" ("position_id");
 
-ALTER TABLE "resources" ADD FOREIGN KEY ("position") REFERENCES "positions" ("id");
+ALTER TABLE "resources" ADD FOREIGN KEY ("position_id") REFERENCES "positions" ("id");
 
-ALTER TABLE "resources" ADD FOREIGN KEY ("clearance") REFERENCES "clearances" ("id");
+ALTER TABLE "resources" ADD FOREIGN KEY ("clearance_id") REFERENCES "clearances" ("id");
 
 ALTER TABLE "resource_assignments" ADD FOREIGN KEY ("resource_request_id") REFERENCES "resource_requests" ("id");
 

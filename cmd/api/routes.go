@@ -11,5 +11,7 @@ func (app *application) routes() http.Handler {
 
 	mux.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.handleHealthcheck())
 
-	return mux
+	mux.HandlerFunc(http.MethodPost, "/v1/positions", app.handleCreatePosition())
+
+	return app.recoverPanic(mux)
 }
