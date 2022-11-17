@@ -9,7 +9,7 @@ import (
 )
 
 type Position struct {
-	ID    int64  `json:"position"`
+	ID    int64  `json:"id"`
 	Title string `json:"title"`
 }
 
@@ -22,10 +22,10 @@ type PositionModel struct {
 	DB *sql.DB
 }
 
-func (m *PositionModel) Insert(p Position) error {
+func (m *PositionModel) Insert(p *Position) error {
 	qry := `
 		INSERT INTO positions (title)
-		VALUES $1
+		VALUES ($1)
 		RETURNING id`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

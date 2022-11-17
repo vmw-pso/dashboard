@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/lib/pq"
 	"github.com/vmw-pso/delivery-dashboard/back-end/internal/validator"
 )
 
@@ -19,6 +20,11 @@ type Resource struct {
 	Certifications []string `json:"certifications,omitempty"`
 }
 
+func ValidateID(v *validator.Validator, id int) {
+	v.Check(id != 0, "id", "must be provided")
+	v.Check(id > 0, "id", "cannot be a negative number")
+}
+
 func ValidateFirstName(v *validator.Validator, firstName string) {
 	v.Check(firstName != "", "firstName", "must be provided")
 	v.Check(len(firstName) < 256, "firstName", "must not be more than 256 bytes")
@@ -30,7 +36,7 @@ func ValidateLastName(v *validator.Validator, lastName string) {
 }
 
 func ValidatePosition(v *validator.Validator, position string) {
-	positions := []string{"AC1, AC2, C, SC, CA, SCA"}
+	positions := []string{"Associate Consultant I", "Associate Consultant II", "Consultant", "Senior Consultant", "Staff Consultant", "Consulting Architect", "Staff Consulting Architect"}
 	v.Check(validator.PermittedValue(position, positions...), "position", "does not exist")
 }
 func ValidateClearance(v *validator.Validator, clearance string) {
@@ -39,6 +45,7 @@ func ValidateClearance(v *validator.Validator, clearance string) {
 }
 
 func ValidateResource(v *validator.Validator, r *Resource) {
+	ValidateID(v, int(r.ID))
 	ValidateFirstName(v, r.FirstName)
 	ValidateLastName(v, r.LastName)
 	ValidatePosition(v, r.Position)
@@ -54,11 +61,11 @@ type ResourceModel struct {
 func (m *ResourceModel) Insert(r *Resource) error {
 	qry := `
 		INSERT INTO resources
-		(first_name, last_name, position_id, clearance_id, specialites, certifications)
-		VALUES ($1, $2, (SELECT id FROM positions WHERE title = $3), (SELECT id FROM clearances WHERE description = $4), $5, $6)
+		(id, first_name, last_name, position_id, clearance_id, specialties, certifications)
+		VALUES ($1, $2, $3, (SELECT id FROM positions WHERE title = $4), (SELECT id FROM clearances WHERE description = $5), $6, $7)
 		RETURNING id`
 
-	args := []interface{}{r.FirstName, r.LastName, r.Position, r.Clearance, r.Specialties, r.Certifications}
+	args := []interface{}{r.ID, r.FirstName, r.LastName, r.Position, r.Clearance, pq.Array(r.Specialties), pq.Array(r.Certifications)}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

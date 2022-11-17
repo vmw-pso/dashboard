@@ -27,15 +27,15 @@ CREATE TABLE "resource_requests" (
   "fulltime" boolean DEFAULT true,
   "percent_required" numeric DEFAULT 1,
   "project_id" varchar,
-  "created_at" datetime DEFAULT (now())
+  "created_at" timestamp(0) DEFAULT (now())
 );
 
 CREATE TABLE "resource_assignments" (
   "resource_request_id" int,
   "resource_id" int,
   "percentage" numeric DEFAULT 1,
-  "created_at" datetime DEFAULT (now()),
-  "updated_at" datetime,
+  "created_at" timestamp(0) DEFAULT (now()),
+  "updated_at" timestamp(0),
   "version" int DEFAULT 1,
   PRIMARY KEY(resource_request_id, resource_id)
 );

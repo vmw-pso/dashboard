@@ -13,5 +13,9 @@ func (app *application) routes() http.Handler {
 
 	mux.HandlerFunc(http.MethodPost, "/v1/positions", app.handleCreatePosition())
 
+	mux.HandlerFunc(http.MethodPost, "/v1/clearances", app.handleCreateClearance())
+
+	mux.HandlerFunc(http.MethodPost, "/v1/resources", app.handleCreateResource())
+
 	return app.recoverPanic(mux)
 }

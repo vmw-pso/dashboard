@@ -7,10 +7,10 @@ import (
 	"github.com/vmw-pso/delivery-dashboard/back-end/internal/validator"
 )
 
-func (app *application) handleCreatePosition() http.HandlerFunc {
+func (app *application) handleCreateClearance() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
-			Title string `json:"title"`
+			Description string `json:"description"`
 		}
 
 		err := app.readJSON(w, r, &input)
@@ -19,24 +19,24 @@ func (app *application) handleCreatePosition() http.HandlerFunc {
 			return
 		}
 
-		position := &data.Position{
-			Title: input.Title,
+		clearance := &data.Clearance{
+			Description: input.Description,
 		}
 
 		v := validator.New()
 
-		if data.ValidateTitle(v, position.Title); !v.Valid() {
+		if data.ValidateDescription(v, clearance.Description); !v.Valid() {
 			app.failedValidationResponse(w, r, v.Errors)
 			return
 		}
 
-		err = app.models.Positions.Insert(position)
+		err = app.models.Clearances.Insert(clearance)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
 		}
 
-		err = app.writeJSON(w, http.StatusCreated, envelope{"position": position}, nil)
+		err = app.writeJSON(w, http.StatusCreated, envelope{"clearance": clearance}, nil)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 		}

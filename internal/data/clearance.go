@@ -22,10 +22,10 @@ type ClearanceModel struct {
 	DB *sql.DB
 }
 
-func (m *ClearanceModel) Insert(c Clearance) error {
+func (m *ClearanceModel) Insert(c *Clearance) error {
 	qry := `
 		INSERT INTO clearances (description)
-		VALUES $1
+		VALUES ($1)
 		RETURNING id`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
