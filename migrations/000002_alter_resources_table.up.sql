@@ -1,0 +1,4 @@
+ALTER TABLE resources ADD COLUMN active BOOLEAN;
+UPDATE resources SET active = 't';
+ALTER TABLE resources ALTER COLUMN active SET NOT NULL;
+ALTER TABLE resources ALTER COLUMN active SET DEFAULT TRUE;

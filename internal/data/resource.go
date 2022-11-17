@@ -18,6 +18,7 @@ type Resource struct {
 	Clearance      string   `json:"clearance"`
 	Specialties    []string `json:"specialities,omitempty"`
 	Certifications []string `json:"certifications,omitempty"`
+	Active         bool     `json:"active"`
 }
 
 func ValidateID(v *validator.Validator, id int) {
@@ -61,11 +62,11 @@ type ResourceModel struct {
 func (m *ResourceModel) Insert(r *Resource) error {
 	qry := `
 		INSERT INTO resources
-		(id, first_name, last_name, position_id, clearance_id, specialties, certifications)
-		VALUES ($1, $2, $3, (SELECT id FROM positions WHERE title = $4), (SELECT id FROM clearances WHERE description = $5), $6, $7)
+		(id, first_name, last_name, position_id, clearance_id, specialties, certifications, active)
+		VALUES ($1, $2, $3, (SELECT id FROM positions WHERE title = $4), (SELECT id FROM clearances WHERE description = $5), $6, $7, $8)
 		RETURNING id`
 
-	args := []interface{}{r.ID, r.FirstName, r.LastName, r.Position, r.Clearance, pq.Array(r.Specialties), pq.Array(r.Certifications)}
+	args := []interface{}{r.ID, r.FirstName, r.LastName, r.Position, r.Clearance, pq.Array(r.Specialties), pq.Array(r.Certifications), r.Active}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -79,7 +80,7 @@ func (m *ResourceModel) Get(id int64) (*Resource, error) {
 	}
 
 	qry := `
-		SELECT resources.id, resources.first_name, resources.last_name, positions.title, clearances.description, resources.specialties, resources.certifications
+		SELECT resources.id, resources.first_name, resources.last_name, positions.title, clearances.description, resources.specialties, resources.certifications, resources.active
 		FROM ((resources
 		INNER JOIN positions ON positions.id = resources.position_id)
 		INNER JOIN clearances ON clearances.id = resources.clearance_id)
@@ -96,8 +97,9 @@ func (m *ResourceModel) Get(id int64) (*Resource, error) {
 		&r.LastName,
 		&r.Position,
 		&r.Clearance,
-		&r.Specialties,
-		&r.Certifications,
+		pq.Array(&r.Specialties),
+		pq.Array(&r.Certifications),
+		&r.Active,
 	)
 	if err != nil {
 		switch {
@@ -114,16 +116,17 @@ func (m *ResourceModel) Get(id int64) (*Resource, error) {
 func (m *ResourceModel) Update(r *Resource) error {
 	qry := `
 		UPDATE resources
-		SET first_name = $1, last_name = $2, position_id = (SELECT id FROM positions WHERE title = $3), clearance_id = (SELECT id FROM clearances WHERE description = $4), specialties = $5, certificates = $6
-		WHERE id = $7`
+		SET first_name = $1, last_name = $2, position_id = (SELECT id FROM positions WHERE title = $3), clearance_id = (SELECT id FROM clearances WHERE description = $4), specialties = $5, certificates = $6, active = $7
+		WHERE id = $8`
 
 	args := []interface{}{
 		r.FirstName,
 		r.LastName,
 		r.Position,
 		r.Clearance,
-		r.Specialties,
-		r.Certifications,
+		pq.Array(r.Specialties),
+		pq.Array(r.Certifications),
+		r.Active,
 		r.ID,
 	}
 

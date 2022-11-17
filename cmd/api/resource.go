@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/vmw-pso/delivery-dashboard/back-end/internal/data"
@@ -17,6 +18,7 @@ func (app *application) handleCreateResource() http.HandlerFunc {
 			Clearance      string   `json:"clearance"`
 			Specialties    []string `json:"specialties"`
 			Certifications []string `json:"certifications"`
+			Active         bool     `json:"active"`
 		}
 
 		err := app.readJSON(w, r, &input)
@@ -33,6 +35,7 @@ func (app *application) handleCreateResource() http.HandlerFunc {
 			Clearance:      input.Clearance,
 			Specialties:    input.Specialties,
 			Certifications: input.Certifications,
+			Active:         input.Active,
 		}
 
 		v := validator.New()
@@ -49,6 +52,32 @@ func (app *application) handleCreateResource() http.HandlerFunc {
 		}
 
 		err = app.writeJSON(w, http.StatusCreated, envelope{"resource": resource}, nil)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+		}
+	}
+}
+
+func (app *application) handleShowResource() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := app.readIDParam(r)
+		if err != nil {
+			app.notFoundResponse(w, r)
+			return
+		}
+
+		resource, err := app.models.Resources.Get(id)
+		if err != nil {
+			switch {
+			case errors.Is(err, data.ErrNotFound):
+				app.notFoundResponse(w, r)
+			default:
+				app.serverErrorResponse(w, r, err)
+			}
+			return
+		}
+
+		err = app.writeJSON(w, http.StatusOK, envelope{"resource": resource}, nil)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 		}
