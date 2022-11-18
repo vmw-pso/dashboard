@@ -15,8 +15,11 @@ func (app *application) routes() http.Handler {
 
 	mux.HandlerFunc(http.MethodPost, "/v1/clearances", app.handleCreateClearance())
 
+	mux.HandlerFunc(http.MethodGet, "/v1/resources", app.handleListResources())
 	mux.HandlerFunc(http.MethodPost, "/v1/resources", app.handleCreateResource())
 	mux.HandlerFunc(http.MethodGet, "/v1/resources/:id", app.handleShowResource())
+	mux.HandlerFunc(http.MethodPatch, "/v1/resources/:id", app.handleUpdateResource())
+	mux.HandlerFunc(http.MethodDelete, "/v1/resources/:id", app.handleDeleteResource())
 
 	return app.recoverPanic(mux)
 }

@@ -98,6 +98,19 @@ func (app *application) readString(qs url.Values, key string, defaultValue strin
 	return str
 }
 
+func (app *application) readBool(qs url.Values, key string, defaultValue bool, v *validator.Validator) bool {
+	str := qs.Get(key)
+	if str == "" {
+		return defaultValue
+	}
+	b, err := strconv.ParseBool(str)
+	if err != nil {
+		v.AddError(key, "must be true or false")
+		return defaultValue
+	}
+	return b
+}
+
 func (app *application) readCSV(qs url.Values, key string, defaultValue []string) []string {
 	csv := qs.Get(key)
 	if csv == "" {

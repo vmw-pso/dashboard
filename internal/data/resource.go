@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/lib/pq"
@@ -175,6 +176,56 @@ func (m *ResourceModel) Delete(id int64) error {
 }
 
 // TODO: Complete this with filters passed as query parameters
-func (m *ResourceModel) GetAll(specialty int, clearance int, filters Filters) ([]*Resource, error) {
-	return nil, errors.New("not implemented")
+func (m *ResourceModel) GetAll(specialties []string, certifications []string, active bool, filters Filters) ([]*Resource, Metadata, error) {
+	qry := fmt.Sprintf(`
+		SELECT count(*) OVER(), resources.id, resources.first_name, resources.last_name, positions.title, clearances.description, resources.specialties, resources.certifications, resources.active
+		FROM ((resources
+			INNER JOIN positions ON positions.id = resources.position_id)
+			INNER JOIN clearances ON clearances.id = resources.clearance_id)
+			WHERE (specialties @> $1 OR $1 = '{}')
+			AND (certifications @> $2 OR $2 = '{}')
+			AND (active = $3 OR $3 = true)
+			ORDER BY %s %s, id ASC
+			LIMIT $4 OFFSET $5`, filters.sortColumn(), filters.sortDirection())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	args := []interface{}{pq.Array(specialties), pq.Array(certifications), active, filters.limit(), filters.offset()}
+
+	rows, err := m.DB.QueryContext(ctx, qry, args...)
+	if err != nil {
+		return nil, Metadata{}, err
+	}
+	defer rows.Close()
+
+	totalRecords := 0
+	resources := []*Resource{}
+
+	for rows.Next() {
+		var resource Resource
+		err := rows.Scan(
+			&totalRecords,
+			&resource.ID,
+			&resource.FirstName,
+			&resource.LastName,
+			&resource.Position,
+			&resource.Clearance,
+			pq.Array(&resource.Specialties),
+			pq.Array(&resource.Certifications),
+			&resource.Active,
+		)
+		if err != nil {
+			return nil, Metadata{}, err
+		}
+		resources = append(resources, &resource)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, Metadata{}, err
+	}
+
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+
+	return resources, metadata, nil
 }
