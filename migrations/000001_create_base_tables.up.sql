@@ -22,12 +22,14 @@ CREATE TABLE "resource_requests" (
   "id" bigserial PRIMARY KEY,
   "customer" varchar NOT NULL,
   "start_date" date,
-  "duration" varchar,
+  "end_date" date,
+  "hours_per_week" int DEFAULT 40,
   "skills" text[] NOT NULL,
-  "fulltime" boolean DEFAULT true,
-  "percent_required" numeric DEFAULT 1,
-  "project_id" varchar,
-  "created_at" timestamp(0) DEFAULT (now())
+  "opportunity_id" varchar,
+  "engagement_id" varchar,
+  "created_at" timestamp(0) DEFAULT (now()),
+  "updated_at" timestamp(0) DEFAULT (now()),
+  "version" int DEFAULT 1
 );
 
 CREATE TABLE "resource_assignments" (
@@ -35,7 +37,7 @@ CREATE TABLE "resource_assignments" (
   "resource_id" int,
   "percentage" numeric DEFAULT 1,
   "created_at" timestamp(0) DEFAULT (now()),
-  "updated_at" timestamp(0),
+  "updated_at" timestamp(0) DEFAULT (now()),
   "version" int DEFAULT 1,
   PRIMARY KEY(resource_request_id, resource_id)
 );

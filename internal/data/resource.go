@@ -46,7 +46,7 @@ func ValidateClearance(v *validator.Validator, clearance string) {
 	v.Check(validator.PermittedValue(clearance, clearances...), "clearance", "does not exist")
 }
 
-func ValidateResource(v *validator.Validator, r *Resource) {
+func ValidateResource(v *validator.Validator, r Resource) {
 	ValidateID(v, int(r.ID))
 	ValidateFirstName(v, r.FirstName)
 	ValidateLastName(v, r.LastName)
@@ -83,8 +83,8 @@ func (m *ResourceModel) Get(id int64) (*Resource, error) {
 	qry := `
 		SELECT resources.id, resources.first_name, resources.last_name, positions.title, clearances.description, resources.specialties, resources.certifications, resources.active
 		FROM ((resources
-		INNER JOIN positions ON positions.id = resources.position_id)
-		INNER JOIN clearances ON clearances.id = resources.clearance_id)
+			INNER JOIN positions ON positions.id = resources.position_id)
+			INNER JOIN clearances ON clearances.id = resources.clearance_id)
 		WHERE resources.id = $1`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -175,18 +175,17 @@ func (m *ResourceModel) Delete(id int64) error {
 	return nil
 }
 
-// TODO: Complete this with filters passed as query parameters
 func (m *ResourceModel) GetAll(specialties []string, certifications []string, active bool, filters Filters) ([]*Resource, Metadata, error) {
 	qry := fmt.Sprintf(`
 		SELECT count(*) OVER(), resources.id, resources.first_name, resources.last_name, positions.title, clearances.description, resources.specialties, resources.certifications, resources.active
 		FROM ((resources
 			INNER JOIN positions ON positions.id = resources.position_id)
 			INNER JOIN clearances ON clearances.id = resources.clearance_id)
-			WHERE (specialties @> $1 OR $1 = '{}')
-			AND (certifications @> $2 OR $2 = '{}')
-			AND (active = $3 OR $3 = true)
-			ORDER BY %s %s, id ASC
-			LIMIT $4 OFFSET $5`, filters.sortColumn(), filters.sortDirection())
+		WHERE (specialties @> $1 OR $1 = '{}')
+		AND (certifications @> $2 OR $2 = '{}')
+		AND (active = $3 OR $3 = true)
+		ORDER BY %s %s, id ASC
+		LIMIT $4 OFFSET $5`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()

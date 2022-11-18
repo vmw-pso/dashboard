@@ -40,7 +40,7 @@ func (app *application) handleCreateResource() http.HandlerFunc {
 
 		v := validator.New()
 
-		if data.ValidateResource(v, &resource); !v.Valid() {
+		if data.ValidateResource(v, resource); !v.Valid() {
 			app.failedValidationResponse(w, r, v.Errors)
 			return
 		}
@@ -149,7 +149,7 @@ func (app *application) handleUpdateResource() http.HandlerFunc {
 
 		v := validator.New()
 
-		if data.ValidateResource(v, resource); !v.Valid() {
+		if data.ValidateResource(v, *resource); !v.Valid() {
 			app.failedValidationResponse(w, r, v.Errors)
 			return
 		}
