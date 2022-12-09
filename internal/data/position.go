@@ -39,38 +39,6 @@ func (m *PositionModel) Insert(p *Position) error {
 	return nil
 }
 
-func (m *PositionModel) GetAll() ([]*Position, error) {
-	qry := `
-		SELECT id, title
-		FROM positions
-		ORDER BY title`
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	rows, err := m.DB.QueryContext(ctx, qry)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var positions []*Position
-
-	for rows.Next() {
-		var p Position
-		err := rows.Scan(
-			&p.ID,
-			&p.Title,
-		)
-		if err != nil {
-			return nil, err
-		}
-		positions = append(positions, &p)
-	}
-
-	return positions, nil
-}
-
 func (m *PositionModel) Get(id int64) (*Position, error) {
 	qry := `
 		SELECT title
@@ -112,6 +80,51 @@ func (m *PositionModel) Delete(id int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := m.DB.QueryContext(ctx, qry, id)
-	return err
+	result, err := m.DB.ExecContext(ctx, qry, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
+func (m *PositionModel) GetAll() ([]*Position, error) {
+	qry := `
+		SELECT id, title
+		FROM positions
+		ORDER BY title`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	rows, err := m.DB.QueryContext(ctx, qry)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var positions []*Position
+
+	for rows.Next() {
+		var p Position
+		err := rows.Scan(
+			&p.ID,
+			&p.Title,
+		)
+		if err != nil {
+			return nil, err
+		}
+		positions = append(positions, &p)
+	}
+
+	return positions, nil
 }

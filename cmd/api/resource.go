@@ -19,6 +19,7 @@ func (app *application) handleCreateResource() http.HandlerFunc {
 			Specialties    []string `json:"specialties"`
 			Certifications []string `json:"certifications"`
 			Active         bool     `json:"active"`
+			Sex            string   `json:"sex"`
 		}
 
 		err := app.readJSON(w, r, &input)
@@ -36,6 +37,7 @@ func (app *application) handleCreateResource() http.HandlerFunc {
 			Specialties:    input.Specialties,
 			Certifications: input.Certifications,
 			Active:         input.Active,
+			Sex:            input.Sex,
 		}
 
 		v := validator.New()
@@ -50,6 +52,8 @@ func (app *application) handleCreateResource() http.HandlerFunc {
 			app.serverErrorResponse(w, r, err)
 			return
 		}
+
+		// app.logger.PrintInfo("resource created", map[string]string{"id": fmt.Sprintf("%d", resource.ID)})
 
 		err = app.writeJSON(w, http.StatusCreated, envelope{"resource": resource}, nil)
 		if err != nil {
@@ -111,6 +115,7 @@ func (app *application) handleUpdateResource() http.HandlerFunc {
 			Specialties    []string `json:"specialties"`
 			Certifications []string `json:"certifications"`
 			Active         *bool    `json:"active"`
+			Sex            *string  `json:"sex"`
 		}
 
 		err = app.readJSON(w, r, &input)
@@ -147,6 +152,10 @@ func (app *application) handleUpdateResource() http.HandlerFunc {
 			resource.Active = *input.Active
 		}
 
+		if input.Sex != nil {
+			resource.Sex = *input.Sex
+		}
+
 		v := validator.New()
 
 		if data.ValidateResource(v, *resource); !v.Valid() {
@@ -157,7 +166,7 @@ func (app *application) handleUpdateResource() http.HandlerFunc {
 		err = app.models.Resources.Update(resource)
 		if err != nil {
 			switch {
-			case errors.Is(err, data.ErrEditCOnflict):
+			case errors.Is(err, data.ErrEditConflict):
 				app.editConflictResponse(w, r)
 			default:
 				app.serverErrorResponse(w, r, err)
@@ -201,6 +210,7 @@ func (app *application) handleDeleteResource() http.HandlerFunc {
 func (app *application) handleListResources() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
+			Clearance      string
 			Specialties    []string
 			Certifications []string
 			Active         bool
@@ -211,6 +221,7 @@ func (app *application) handleListResources() http.HandlerFunc {
 
 		qs := r.URL.Query()
 
+		input.Clearance = app.readString(qs, "clearance", "*")
 		input.Specialties = app.readCSV(qs, "specialties", []string{})
 		input.Certifications = app.readCSV(qs, "certifications", []string{})
 		input.Active = app.readBool(qs, "active", true, v)
@@ -224,6 +235,7 @@ func (app *application) handleListResources() http.HandlerFunc {
 			return
 		}
 
+		// currently not filtering for clearance also. Need to fix
 		resources, metadata, err := app.models.Resources.GetAll(input.Specialties, input.Certifications, input.Active, input.Filters)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)

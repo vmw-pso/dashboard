@@ -11,15 +11,38 @@ import (
 	"github.com/vmw-pso/delivery-dashboard/back-end/internal/validator"
 )
 
+type Sex int64
+
+const (
+	Unknown Sex = iota
+	Male
+	Female
+	Withheld
+)
+
+func (s Sex) String() string {
+	switch s {
+	case Male:
+		return "Male"
+	case Female:
+		return "Female"
+	case Withheld:
+		return "Not Specified"
+	default:
+		return "Unknown"
+	}
+}
+
 type Resource struct {
 	ID             int64    `json:"resourceId"`
 	FirstName      string   `json:"firstName"`
 	LastName       string   `json:"lastName"`
 	Position       string   `json:"position"`
 	Clearance      string   `json:"clearance"`
-	Specialties    []string `json:"specialities,omitempty"`
+	Specialties    []string `json:"specialties,omitempty"`
 	Certifications []string `json:"certifications,omitempty"`
 	Active         bool     `json:"active"`
+	Sex            string   `json:"sex"`
 }
 
 func ValidateID(v *validator.Validator, id int) {
@@ -41,9 +64,15 @@ func ValidatePosition(v *validator.Validator, position string) {
 	positions := []string{"Associate Consultant I", "Associate Consultant II", "Consultant", "Senior Consultant", "Staff Consultant", "Consulting Architect", "Staff Consulting Architect"}
 	v.Check(validator.PermittedValue(position, positions...), "position", "does not exist")
 }
+
 func ValidateClearance(v *validator.Validator, clearance string) {
 	clearances := []string{"None", "Baseline", "NV1", "NV2", "TSPV"}
-	v.Check(validator.PermittedValue(clearance, clearances...), "clearance", "does not exist")
+	v.Check(validator.PermittedValue(clearance, clearances...), "clearance", "must be one of ('None', 'Baseline', 'NV1', 'NV2')")
+}
+
+func ValidateSex(v *validator.Validator, sex string) {
+	sexes := []string{"Unknown", "Male", "Female", "Not Specified"}
+	v.Check(validator.PermittedValue(sex, sexes...), "sex", "must be one of ('Unknown', 'Male', 'Female', 'Not Specified')")
 }
 
 func ValidateResource(v *validator.Validator, r Resource) {
@@ -52,6 +81,7 @@ func ValidateResource(v *validator.Validator, r Resource) {
 	ValidateLastName(v, r.LastName)
 	ValidatePosition(v, r.Position)
 	ValidateClearance(v, r.Clearance)
+	ValidateSex(v, r.Sex)
 	v.Check(validator.Unique(r.Specialties), "specialties", "must not contain duplicate values")
 	v.Check(validator.Unique(r.Certifications), "certification", "must not contain duplicate values")
 }
@@ -63,11 +93,11 @@ type ResourceModel struct {
 func (m *ResourceModel) Insert(r *Resource) error {
 	qry := `
 		INSERT INTO resources
-		(id, first_name, last_name, position_id, clearance_id, specialties, certifications, active)
-		VALUES ($1, $2, $3, (SELECT id FROM positions WHERE title = $4), (SELECT id FROM clearances WHERE description = $5), $6, $7, $8)
+		(id, first_name, last_name, position_id, clearance_id, specialties, certifications, active, sex)
+		VALUES ($1, $2, $3, (SELECT id FROM positions WHERE title = $4), (SELECT id FROM clearances WHERE description = $5), $6, $7, $8, $9)
 		RETURNING id`
 
-	args := []interface{}{r.ID, r.FirstName, r.LastName, r.Position, r.Clearance, pq.Array(r.Specialties), pq.Array(r.Certifications), r.Active}
+	args := []interface{}{r.ID, r.FirstName, r.LastName, r.Position, r.Clearance, pq.Array(r.Specialties), pq.Array(r.Certifications), r.Active, r.Sex}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -81,7 +111,7 @@ func (m *ResourceModel) Get(id int64) (*Resource, error) {
 	}
 
 	qry := `
-		SELECT resources.id, resources.first_name, resources.last_name, positions.title, clearances.description, resources.specialties, resources.certifications, resources.active
+		SELECT resources.id, resources.first_name, resources.last_name, positions.title, clearances.description, resources.specialties, resources.certifications, resources.active, resources.sex
 		FROM ((resources
 			INNER JOIN positions ON positions.id = resources.position_id)
 			INNER JOIN clearances ON clearances.id = resources.clearance_id)
@@ -101,6 +131,7 @@ func (m *ResourceModel) Get(id int64) (*Resource, error) {
 		pq.Array(&r.Specialties),
 		pq.Array(&r.Certifications),
 		&r.Active,
+		&r.Sex,
 	)
 	if err != nil {
 		switch {
@@ -117,8 +148,8 @@ func (m *ResourceModel) Get(id int64) (*Resource, error) {
 func (m *ResourceModel) Update(r *Resource) error {
 	qry := `
 		UPDATE resources
-		SET first_name = $1, last_name = $2, position_id = (SELECT id FROM positions WHERE title = $3), clearance_id = (SELECT id FROM clearances WHERE description = $4), specialties = $5, certificates = $6, active = $7
-		WHERE id = $8`
+		SET first_name = $1, last_name = $2, position_id = (SELECT id FROM positions WHERE title = $3), clearance_id = (SELECT id FROM clearances WHERE description = $4), specialties = $5, certifications = $6, active = $7, sex = $8
+		WHERE id = $9`
 
 	args := []interface{}{
 		r.FirstName,
@@ -128,6 +159,7 @@ func (m *ResourceModel) Update(r *Resource) error {
 		pq.Array(r.Specialties),
 		pq.Array(r.Certifications),
 		r.Active,
+		r.Sex,
 		r.ID,
 	}
 
@@ -138,7 +170,7 @@ func (m *ResourceModel) Update(r *Resource) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
-			return ErrEditCOnflict
+			return ErrEditConflict
 		default:
 			return err
 		}
@@ -177,7 +209,7 @@ func (m *ResourceModel) Delete(id int64) error {
 
 func (m *ResourceModel) GetAll(specialties []string, certifications []string, active bool, filters Filters) ([]*Resource, Metadata, error) {
 	qry := fmt.Sprintf(`
-		SELECT count(*) OVER(), resources.id, resources.first_name, resources.last_name, positions.title, clearances.description, resources.specialties, resources.certifications, resources.active
+		SELECT count(*) OVER(), resources.id, resources.first_name, resources.last_name, positions.title, clearances.description, resources.specialties, resources.certifications, resources.active, resources.sex
 		FROM ((resources
 			INNER JOIN positions ON positions.id = resources.position_id)
 			INNER JOIN clearances ON clearances.id = resources.clearance_id)
@@ -213,6 +245,7 @@ func (m *ResourceModel) GetAll(specialties []string, certifications []string, ac
 			pq.Array(&resource.Specialties),
 			pq.Array(&resource.Certifications),
 			&resource.Active,
+			&resource.Sex,
 		)
 		if err != nil {
 			return nil, Metadata{}, err

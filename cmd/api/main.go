@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"flag"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,6 +27,9 @@ type config struct {
 		maxOpenConns int
 		maxIdleConns int
 		maxIdleTime  string
+	}
+	cors struct {
+		trustedOrigins []string
 	}
 }
 
@@ -50,12 +54,17 @@ func run(args []string, logger *jsonlog.Logger) error {
 
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 
-	cfg.port = *flags.Int("port", 8085, "Port to listen on")
+	cfg.port = *flags.Int("port", 8086, "Port to listen on")
 	cfg.env = *flags.String("env", "development", "Environment ([development]|production)")
 	cfg.db.dsn = *flags.String("dsn", "postgres://postgres:password@localhost/dashboard?sslmode=disable", "PostgreSQL DSN")
 	cfg.db.maxOpenConns = *flags.Int("db-max-open-conns", 25, "Database maximum open connections")
 	cfg.db.maxIdleConns = *flags.Int("db-max-idle-conns", 25, "Database maximum idle connections")
 	cfg.db.maxIdleTime = *flags.String("db-max-idle-time", "15m", "Database maximum idle time")
+
+	flags.Func("cors-trusted-origins", "Trusted CORS origins (space separated)", func(val string) error {
+		cfg.cors.trustedOrigins = strings.Fields(val)
+		return nil
+	})
 
 	if err := flags.Parse(args[1:]); err != nil {
 		return err

@@ -21,5 +21,5 @@ func (app *application) routes() http.Handler {
 	mux.HandlerFunc(http.MethodPatch, "/v1/resources/:id", app.handleUpdateResource())
 	mux.HandlerFunc(http.MethodDelete, "/v1/resources/:id", app.handleDeleteResource())
 
-	return app.recoverPanic(mux)
+	return app.recoverPanic(app.enableCORS(mux))
 }

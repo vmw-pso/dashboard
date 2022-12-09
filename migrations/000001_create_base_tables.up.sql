@@ -35,7 +35,7 @@ CREATE TABLE "resource_requests" (
 CREATE TABLE "resource_assignments" (
   "resource_request_id" int,
   "resource_id" int,
-  "percentage" numeric DEFAULT 1,
+  "hours_per_week" int DEFAULT 40,
   "created_at" timestamp(0) DEFAULT (now()),
   "updated_at" timestamp(0) DEFAULT (now()),
   "version" int DEFAULT 1,

@@ -39,38 +39,6 @@ func (m *ClearanceModel) Insert(c *Clearance) error {
 	return nil
 }
 
-func (m *ClearanceModel) GetAll() ([]*Clearance, error) {
-	qry := `
-		SELECT id, description
-		FROM clearances
-		ORDER BY description`
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	rows, err := m.DB.QueryContext(ctx, qry)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var clearances []*Clearance
-
-	for rows.Next() {
-		var c Clearance
-		err := rows.Scan(
-			&c.ID,
-			&c.Description,
-		)
-		if err != nil {
-			return nil, err
-		}
-		clearances = append(clearances, &c)
-	}
-
-	return clearances, nil
-}
-
 func (m *ClearanceModel) Get(id int64) (*Clearance, error) {
 	qry := `
 		SELECT description
@@ -112,6 +80,51 @@ func (m *ClearanceModel) Delete(id int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := m.DB.QueryContext(ctx, qry, id)
-	return err
+	result, err := m.DB.ExecContext(ctx, qry, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
+func (m *ClearanceModel) GetAll() ([]*Clearance, error) {
+	qry := `
+		SELECT id, description
+		FROM clearances
+		ORDER BY description`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	rows, err := m.DB.QueryContext(ctx, qry)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var clearances []*Clearance
+
+	for rows.Next() {
+		var c Clearance
+		err := rows.Scan(
+			&c.ID,
+			&c.Description,
+		)
+		if err != nil {
+			return nil, err
+		}
+		clearances = append(clearances, &c)
+	}
+
+	return clearances, nil
 }
